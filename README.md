@@ -1,6 +1,6 @@
 # three.js product configurator
 
-A custom-built, realistic 3D product configurator on [three.js](https://threejs.org/), with path tracing by [three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer). It draws with a fast live renderer while you move, then resolves a path-traced photo render in the browser as soon as the view is still: true mirror reflections, glass, brushed steel and soft studio shadows.
+A custom-built, realistic 3D product configurator on [three.js](https://threejs.org/), with path tracing by [three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer). It draws with a fast live renderer, and one press of **Photo render** path traces the current view in the browser: true mirror reflections, glass, brushed steel and soft studio shadows.
 
 **[Live demo](https://niallarnfieldcom.github.io/threejs-product-configurator/)**
 
@@ -15,16 +15,16 @@ The demo scene is the **Fern Room**, a two-chair salon station modelled in Blend
 | `src/scene-config.js` | The scene as data: model, configurable slots, finishes, camera views, price, and the URL state helpers. |
 | `src/studio.js` | The photo studio: a procedural HDR panorama of soft boxes, a seamless floor, and a shadow light for the live renderer. No HDRI download. |
 | `src/finishes.js` | Applies finishes. A colour finish turns the authored texture into a neutral grain map and tints it, so new colours keep the leather's mottling and the timber's figure. |
-| `src/photo-tracer.js` | The path-traced photo render ([three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer)), loaded only on devices that will use it. |
+| `src/photo-tracer.js` | The path-traced photo render ([three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer)), downloaded the first time a visitor asks for one. |
 | `src/capabilities.js` | Chooses a render tier per device: `basic`, `live`, `mobile` or `traced`. |
 | `src/main.js` | Renderer, camera, UI wiring, share links, AR and embed messaging. |
 
 A few decisions worth copying:
 
 - **One lighting description, two renderers.** The path tracer importance-samples the studio panorama, so its soft boxes behave as area lights. The live renderer prefilters a version of the same panorama and adds one shadow-casting light aligned with the key.
-- **The photo render is automatic.** It starts 0.2 s after the camera stops, accumulates off-screen, and cross-fades over the live frame once it is clean enough to show. Any interaction returns to the live renderer instantly.
+- **The photo render is a deliberate press.** Nothing is traced until the visitor asks, and the tracer is only downloaded then. It accumulates off-screen and cross-fades over the live frame once it is clean enough to show. Moving the camera or changing a finish returns to the live renderer instantly.
 - **It stops when it is done.** Tracing ends at 480 samples and the GPU goes idle.
-- **Phones get it too, carefully.** Capable phones and tablets run a lighter photo render (lower resolution, 200 samples, shorter paths, more denoising). If an attempt crashes the tab or loses the graphics context, the device stays on the live renderer for the rest of the session. Low-power devices never download the tracer at all.
+- **Phones get it too, carefully.** Capable phones and tablets run a lighter photo render (lower resolution, 200 samples, shorter paths, more denoising). If an attempt crashes the tab or loses the graphics context, the device stays on the live renderer for the rest of the session. Low-power devices are not offered the button.
 - **Small payload.** The whole scene is one 4 MB Draco-compressed GLB. The initial JavaScript is about 220 KB gzipped, and the tracer is a separate 61 KB chunk.
 - **State lives in the URL.** `?a=cognac&b=oak&view=chair` restores a configuration, and invalid values fall back to the defaults. On desktop a QR code follows the current configuration, so a visitor can scan it and carry on, on their phone.
 
@@ -37,7 +37,7 @@ npm test         # scene config, URL state and render-tier rules
 npm run build
 ```
 
-Add `?render=live` to stay on the live renderer, or `?render=traced` to force the photo render.
+Add `?render=live` to remove the Photo render button, or `?render=traced` to offer it on a device that would not normally get it.
 
 ## Use your own product
 
@@ -54,7 +54,7 @@ Add `?embed=1` to hide the built-in panel and drive the configurator from your o
 | --- | --- | --- |
 | `configurator:ready` | out | `scene`, `slots` (with finishes), `views` |
 | `configurator:change` | out | `state` (scene and chosen finish names) |
-| `configurator:event` | out | analytics events: `ready`, `finish`, `view`, `share`, `save_image`, `ar_open` |
+| `configurator:event` | out | analytics events: `ready`, `finish`, `view`, `photo_render`, `share`, `save_image`, `ar_open` |
 | `configurator:setFinish` | in | `slot`, `finish` |
 | `configurator:setView` | in | `view` |
 

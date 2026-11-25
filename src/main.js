@@ -3,10 +3,10 @@
 // One scene, three layers:
 //   scene-config.js  what can be configured (slots, finishes, views, price)
 //   this file        the live renderer, camera, UI wiring and URL state
-//   photo-tracer.js  the path-traced photo render, loaded only on capable devices
+//   photo-tracer.js  the path-traced photo render, loaded when a visitor asks for one
 //
-// The live renderer draws while anything moves. Once the view is still, the
-// path tracer accumulates samples and its image fades in over the live frame.
+// The live renderer draws the scene. Pressing "Photo render" path traces the
+// current view, and the result fades in over the live frame.
 
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -237,16 +237,22 @@ function goToView(id, { instant = false } = {}) {
 controls.addEventListener("start", () => { flight = null; });
 
 // ---- Render loop ------------------------------------------------------------
-let photo = null;          // the path tracer, once loaded and built
-let liveDirty = true;      // the live frame needs redrawing
+// The live renderer draws whenever something changes. The photo render is a
+// deliberate action: the visitor presses "Photo render" for the view they are
+// looking at. Moving the camera or changing a finish returns to the live view.
+let photo = null;            // the path tracer, once loaded and built
+let photoRequested = false;  // a photo render of the current view has been asked for
+let photoLoading = false;    // the tracer is being downloaded and built
+let liveDirty = true;        // the live frame needs redrawing
 let lastMotion = performance.now();
 let lastFrame = performance.now();
 let tracedOnScreen = false;
-const SETTLE_MS = tier.photo?.settleMs ?? 220; // stillness before the photo render starts
+const SETTLE_MS = tier.photo?.settleMs ?? 220; // let the camera come to rest before tracing
 
 function invalidate() {
   liveDirty = true;
   lastMotion = performance.now();
+  if (photoRequested) endPhotoRender(); // the view changed: back to the live renderer
 }
 
 function drawLive() {
@@ -274,27 +280,26 @@ function frame(now) {
   if (controls.update()) invalidate();
 
   const still = now - lastMotion > SETTLE_MS;
-  if (photo && still && !document.hidden) {
+  if (photo && photoRequested && still && !document.hidden) {
     if (liveDirty) drawLive();           // make sure the frame under the fade is current
+    if (photo.materialsStale) { photo.materialsChanged(); photo.materialsStale = false; }
     if (photo.stale) { photo.cameraChanged(); photo.stale = false; }
     photo.render(frameMs);
     tracedOnScreen = true;
     updateStatus();
   } else if (liveDirty) {
     drawLive();
-    if (photo) { photo.stale = true; updateStatus(); }
   }
 }
 
-// ---- Photo render status ----------------------------------------------------
+// ---- Photo render -----------------------------------------------------------
 const statusEl = $("status");
+const photoButton = $("btn-photo");
 let statusKey = "";
 function updateStatus() {
-  if (!statusEl) return;
   let key = "hidden", label = "", progress = 0;
-  if (photo) {
-    if (photo.compiling) { key = "preparing"; label = "Preparing photo render"; }
-    else if (photo.stale || !photo.revealed) { key = "preparing"; label = "Live preview"; }
+  if (photoRequested) {
+    if (!photo || photo.compiling || photo.stale || !photo.revealed) { key = "preparing"; label = "Preparing photo render"; }
     else if (!photo.done) { key = "rendering"; label = "Rendering photo"; progress = photo.progress; if (photo.samples > 12) writeFlagOnce(); }
     else { key = "done"; label = "Photo render"; progress = 1; }
   }
@@ -303,6 +308,8 @@ function updateStatus() {
   statusKey = key;
   statusEl.dataset.state = key;
   statusEl.querySelector("span").textContent = label;
+  photoButton.textContent = photoRequested ? "Back to live view" : "Photo render";
+  photoButton.setAttribute("aria-pressed", String(photoRequested));
 }
 
 // A normal navigation away is not a crash: only an abrupt kill leaves the flag set.
@@ -310,27 +317,49 @@ addEventListener("pagehide", () => { if (readFlag() === "attempting") writeFlag(
 let flagCleared = false;
 function writeFlagOnce() { if (!flagCleared) { flagCleared = true; writeFlag(null); } }
 
-async function startPhotoRender() {
-  if (!tier.pathTracing) return;
+/** Download and build the path tracer. Happens once, on the first request. */
+async function loadPhotoTracer() {
+  photoLoading = true;
   try {
     const { createPhotoTracer } = await import("./photo-tracer.js");
-    // Let the first live frame paint before the BVH build blocks the thread.
+    // Let the "preparing" state paint before the BVH build blocks the thread.
     await new Promise((resolve) => setTimeout(resolve, 60));
-    writeFlag("attempting"); // cleared once the first traced image is on screen
+    writeFlag("attempting"); // cleared once a traced image is on screen
     const tracer = createPhotoTracer(renderer, scene, camera, { studio, ...tier.photo });
     tracer.build();
     tracedOnScreen = true; // the build touched GL state; resync before the next live frame
-    tracer.stale = true;
     photo = tracer;
-    document.documentElement.dataset.photo = "on";
-    updateStatus();
   } catch (error) {
     console.warn("Photo render unavailable; staying on the live renderer.", error);
     writeFlag("failed");
     photo = null;
+    photoRequested = false;
+    photoButton.hidden = true;
     renderer.resetState();
-    invalidate();
+    liveDirty = true;
+    toast("Photo render is not available on this device");
+  } finally {
+    photoLoading = false;
+    updateStatus();
   }
+}
+
+/** The visitor asked for a photo render of the current view. */
+function requestPhotoRender() {
+  if (!tier.pathTracing || photoRequested) return;
+  photoRequested = true;
+  if (photo) photo.stale = true; // restart accumulation for this view
+  else if (!photoLoading) loadPhotoTracer();
+  updateStatus();
+  track("photo_render");
+}
+
+/** Leave the photo render and show the live renderer again. */
+function endPhotoRender() {
+  if (!photoRequested) return;
+  photoRequested = false;
+  liveDirty = true;
+  updateStatus();
 }
 
 // ---- UI ---------------------------------------------------------------------
@@ -355,7 +384,7 @@ function setFinish(slotId, finishId, { silent = false } = {}) {
   }
   renderer.shadowMap.needsUpdate = true;
   invalidate();
-  if (photo) { photo.materialsChanged(); tracedOnScreen = true; }
+  if (photo) photo.materialsStale = true; // re-read by the tracer on the next photo render
   syncUrl();
   if (!silent) {
     track("finish", { slot: slotId, finish: finishId });
@@ -431,6 +460,8 @@ function buildPanel() {
     viewsEl.append(button);
   }
 
+  photoButton.hidden = !tier.pathTracing;
+  photoButton.addEventListener("click", () => (photoRequested ? endPhotoRender() : requestPhotoRender()));
   $("btn-save").addEventListener("click", saveImage);
   $("btn-share").addEventListener("click", share);
   const arButton = $("btn-ar");
@@ -451,7 +482,7 @@ function fileStem() {
 }
 
 function saveImage() {
-  if (liveDirty) drawLive();
+  if (liveDirty && !photoRequested) drawLive();
   renderer.domElement.toBlob((blob) => {
     if (!blob) return toast("The image could not be saved");
     const link = document.createElement("a");
@@ -459,8 +490,9 @@ function saveImage() {
     link.download = `${fileStem()}.png`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 4000);
-    toast(photo?.revealed ? "Photo render saved" : "Image saved");
-    track("save_image", { traced: Boolean(photo?.revealed), samples: photo?.samples ?? 0 });
+    const traced = Boolean(photoRequested && photo?.revealed);
+    toast(traced ? "Photo render saved" : "Image saved");
+    track("save_image", { traced, samples: traced ? photo.samples : 0 });
   }, "image/png");
 }
 
@@ -544,4 +576,3 @@ postToParent({
   views: SCENE.views.map(({ id, label }) => ({ id, label })),
 });
 track("ready", { tier: tier.key });
-startPhotoRender();

@@ -6,12 +6,13 @@
 // bounce light off the floor, true mirror reflections and glass.
 //
 // The app drives it like this:
-//   - camera or scene moving  → the live renderer draws; the tracer waits
-//   - everything still        → call render() each frame; samples accumulate
-//     off-screen and the image cross-fades in once it is clean enough to show
+//   - the visitor presses "Photo render" → call render() each frame; samples
+//     accumulate off-screen and the image cross-fades in once it is clean
+//     enough to show
 //   - converged               → render() does nothing; the GPU is idle
+//   - camera or finish changes → the app goes back to the live renderer
 //
-// This module is loaded lazily, so devices that never trace never download it.
+// This module is loaded on the first request, so visitors who never ask never download it.
 
 import * as THREE from "three";
 import { WebGLPathTracer, DenoiseMaterial } from "three-gpu-pathtracer";
