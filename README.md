@@ -26,7 +26,7 @@ A few decisions worth copying:
 - **It stops when it is done.** Tracing ends at 480 samples and the GPU goes idle.
 - **Phones get it too, carefully.** Capable phones and tablets run a lighter photo render (lower resolution, 200 samples, shorter paths, more denoising). If an attempt crashes the tab or loses the graphics context, the device stays on the live renderer for the rest of the session. Low-power devices never download the tracer at all.
 - **Small payload.** The whole scene is one 4 MB Draco-compressed GLB. The initial JavaScript is about 220 KB gzipped, and the tracer is a separate 61 KB chunk.
-- **State lives in the URL.** `?a=cognac&b=oak&view=chair` restores a configuration, and invalid values fall back to the defaults.
+- **State lives in the URL.** `?a=cognac&b=oak&view=chair` restores a configuration, and invalid values fall back to the defaults. On desktop a QR code follows the current configuration, so a visitor can scan it and carry on, on their phone.
 
 ## Run it
 

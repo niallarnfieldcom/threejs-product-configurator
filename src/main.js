@@ -44,6 +44,32 @@ function syncUrl() {
   const next = writeState(state);
   for (const key of ["embed", "parentOrigin", "render", "debug"]) if (params.has(key)) next.set(key, params.get(key));
   history.replaceState(null, "", `${location.pathname}?${next}`);
+  updatePhoneCode();
+}
+
+// ---- "Try it on your phone" QR code ------------------------------------------
+// Shown on roomy desktop screens only (see the media query in index.html). The
+// QR library is loaded on demand and the code follows the current configuration.
+let qrModule = null;
+let qrUrl = "";
+async function updatePhoneCode() {
+  const card = $("phone");
+  if (!card || getComputedStyle(card).display === "none") return;
+  const url = `${location.origin}${location.pathname}?${writeState(state)}`;
+  if (url === qrUrl) return;
+  qrUrl = url;
+  try {
+    qrModule ||= await import("qrcode");
+    const svg = await (qrModule.default ?? qrModule).toString(url, {
+      type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#1c1a17", light: "#ffffff" },
+    });
+    if (url !== qrUrl) return; // a newer configuration is already being drawn
+    card.querySelector(".code").innerHTML = svg;
+    card.dataset.ready = "1";
+  } catch (error) {
+    console.warn("QR code unavailable", error);
+    card.hidden = true;
+  }
 }
 
 // ---- Renderer ---------------------------------------------------------------
@@ -498,7 +524,7 @@ setLoading(1);
 $("loader")?.classList.add("done");
 setTimeout(() => $("loader")?.remove(), 700);
 
-addEventListener("resize", () => { layoutCamera(); invalidate(); });
+addEventListener("resize", () => { layoutCamera(); invalidate(); updatePhoneCode(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) lastFrame = performance.now(); });
 renderer.domElement.addEventListener("webglcontextlost", (event) => {
   event.preventDefault();

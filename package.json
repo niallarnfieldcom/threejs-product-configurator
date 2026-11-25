@@ -15,6 +15,7 @@
   "dependencies": {
     "@google/model-viewer": "^4.3.1",
     "playcanvas": "^2.21.4",
+    "qrcode": "^1.5.4",
     "three": "0.183.0",
     "three-gpu-pathtracer": "^0.0.24",
     "three-mesh-bvh": "^0.9.10"

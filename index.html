@@ -98,9 +98,11 @@
     .body .credit { display: none; }
 
     /* ---------- photo render status ---------- */
+    #corner { position: fixed; z-index: 9; left: 20px; bottom: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; pointer-events: none; }
+    #corner > * { pointer-events: auto; }
     #status {
       --progress: 0;
-      position: fixed; z-index: 9; left: 20px; bottom: 20px; display: flex; align-items: center; gap: 9px;
+      display: flex; align-items: center; gap: 9px;
       padding: 8px 14px 8px 10px; border-radius: 999px; background: var(--surface); border: 1px solid rgb(255 255 255 / 0.7);
       box-shadow: var(--shadow); font-size: 13px; font-weight: 500; color: var(--ink-2);
       -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
@@ -112,6 +114,21 @@
       -webkit-mask: radial-gradient(circle, transparent 4.5px, #000 5px); mask: radial-gradient(circle, transparent 4.5px, #000 5px); }
     #status[data-state="preparing"] .ring { background: rgb(28 26 23 / 0.16); }
     #status[data-state="done"] { color: var(--ink); }
+
+    /* ---------- "try it on your phone" QR ---------- */
+    #phone {
+      display: flex; align-items: center; gap: 14px; width: 312px; padding: 12px 16px 12px 12px;
+      background: var(--surface); border: 1px solid rgb(255 255 255 / 0.7); border-radius: 18px; box-shadow: var(--shadow);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      transition: opacity 0.3s ease;
+    }
+    #phone:not([data-ready]) { opacity: 0; pointer-events: none; }
+    #phone .code { flex: none; width: 132px; height: 132px; padding: 8px; border-radius: 10px; background: #fff; }
+    #phone .code svg { display: block; width: 100%; height: 100%; }
+    #phone p { margin: 0; font-size: 13px; color: var(--ink-2); }
+    #phone strong { display: block; margin-bottom: 2px; font-size: 14px; font-weight: 600; color: var(--ink); }
+    /* Only where there is a second device to pick up: roomy, mouse-driven screens. */
+    @media (max-width: 899px), (max-height: 640px), (pointer: coarse) { #phone { display: none; } }
 
     #toast {
       position: fixed; z-index: 30; left: 50%; bottom: 24px; translate: -50% 8px; max-width: calc(100vw - 32px);
@@ -139,7 +156,7 @@
     #ar-close { position: absolute; top: 16px; left: 16px; width: 46px; height: 46px; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--surface-solid); font-size: 18px; cursor: pointer; }
     #ar-overlay p { position: absolute; left: 0; right: 0; bottom: 24px; margin: 0; text-align: center; font-size: 14px; color: var(--ink-2); pointer-events: none; }
 
-    html[data-embed="1"] #panel, html[data-embed="1"] #status { display: none; }
+    html[data-embed="1"] #panel, html[data-embed="1"] #corner { display: none; }
 
     /* ---------- phones: bottom sheet ---------- */
     @media (max-width: 719px) {
@@ -164,7 +181,7 @@
       .body .credit { display: block; margin: 0; padding: 12px 0 14px; border-top: 1px solid var(--line); }
       #price .note { display: none; }
       #kind { display: none; }
-      #status { top: calc(14px + env(safe-area-inset-top)); bottom: auto; left: 14px; }
+      #corner { top: calc(14px + env(safe-area-inset-top)); bottom: auto; left: 14px; }
       #toast { bottom: auto; top: calc(14px + env(safe-area-inset-top)); }
     }
     @media (max-height: 560px) and (min-width: 720px) {
@@ -209,7 +226,13 @@
     </div>
   </aside>
 
-  <div id="status" role="status"><i class="ring" aria-hidden="true"></i><span></span></div>
+  <div id="corner">
+    <div id="status" role="status"><i class="ring" aria-hidden="true"></i><span></span></div>
+    <div id="phone">
+      <div class="code" role="img" aria-label="QR code that opens this configuration on a phone"></div>
+      <p><strong>Try it on your phone</strong>Scan to open this exact configuration.</p>
+    </div>
+  </div>
   <div id="toast" role="status" aria-live="polite"></div>
 
   <div id="ar-overlay" hidden>

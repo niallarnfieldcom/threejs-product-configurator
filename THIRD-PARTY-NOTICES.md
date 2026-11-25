@@ -18,6 +18,7 @@ Installed by `npm install`, not stored in this repository.
 | [three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer) | MIT |
 | [three-mesh-bvh](https://github.com/gkjohnson/three-mesh-bvh) | MIT |
 | [@google/model-viewer](https://github.com/google/model-viewer) | Apache-2.0 |
+| [qrcode](https://github.com/soldair/node-qrcode) | MIT |
 | [playcanvas](https://github.com/playcanvas/engine) (authoring page only) | MIT |
 | [vite](https://github.com/vitejs/vite) | MIT |
 
