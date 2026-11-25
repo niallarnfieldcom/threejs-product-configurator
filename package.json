@@ -30,5 +30,6 @@
   },
   "description": "A data-driven 3D product configurator for three.js: multi-slot finishes, path-traced Photo Mode, AR, share links and embed messaging.",
   "author": "Niall Arnfield (https://niallarnfield.com)",
-  "homepage": "https://github.com/niallarnfieldcom/threejs-product-configurator"
+  "homepage": "https://github.com/niallarnfieldcom/threejs-product-configurator",
+  "license": "SEE LICENSE IN LICENSE"
 }
