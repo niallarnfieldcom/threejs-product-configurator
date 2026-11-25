@@ -1,0 +1,25 @@
+{
+  "name": "3D Product Configurator",
+  "short_name": "Configurator",
+  "description": "Real-time and path-traced 3D product configurator for three.js.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

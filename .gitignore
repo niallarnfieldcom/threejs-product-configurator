@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-standalone/
+_shots/
+tools/.acg-tmp/
+tools/model-mesh-map.json
+.DS_Store
