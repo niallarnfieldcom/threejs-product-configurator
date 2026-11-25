@@ -1,254 +1,225 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>3D Product Configurator</title>
-  <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#0b0b0c">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fern Room · 3D product configurator</title>
+  <meta name="description" content="Configure a two-chair salon station in 3D: choose the leather and timber, then watch a path-traced photo render resolve in your browser.">
+  <meta name="theme-color" content="#ebe5db">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0b0b0c;
-      --panel: rgba(18,18,20,0.84);
-      --panel-2: #232327;
-      --line: rgba(255,255,255,0.10);
-      --line-2: rgba(255,255,255,0.20);
-      --ink: #f5f5f6;
-      --ink-dim: rgba(245,245,246,0.56);
-      --ink-faint: rgba(245,245,246,0.30);
-      --accent: #ffffff;
-      --accent-2: #c8c8cc;
-      --accent-grad: #f4f4f5;
-      /* aliases used by the share/QR modal */
-      --panel-border: rgba(255,255,255,0.16);
+      color-scheme: light;
+      --backdrop: #ebe5db;
+      --surface: rgb(255 253 250 / 0.84);
+      --surface-solid: #fffdfa;
+      --ink: #1c1a17;
+      --ink-2: #575149;
+      --line: rgb(28 26 23 / 0.12);
+      --line-strong: rgb(28 26 23 / 0.28);
+      --shadow: 0 1px 2px rgb(60 45 25 / 0.06), 0 18px 48px rgb(60 45 25 / 0.14);
+      --radius: 22px;
+      --sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; min-height: 100dvh; overflow: hidden; background: var(--bg); }
-    body { font-family: "Inter", system-ui, -apple-system, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; background: var(--backdrop); }
+    body { font: 400 15px/1.45 var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    button { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
     #app { position: fixed; inset: 0; }
-    canvas { display: block; }
-    button { font-family: inherit; }
-    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    #app canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+    #app canvas:active { cursor: grabbing; }
 
-    /* ---------- shared control primitives ---------- */
-    .label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 9px; }
-    .section { margin-bottom: 18px; }
-    .seg { display: flex; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
-    .seg button {
-      flex: 1; font-size: 12px; color: var(--ink-dim); background: transparent; border: 0; border-radius: 7px;
-      padding: 8px 0; cursor: pointer; transition: color .15s, background .15s;
-    }
-    .seg button.active { background: rgba(255,255,255,0.10); color: var(--ink); }
-
-    .slot-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    .slot-tabs:empty { display: none; }
-    .slot-tab {
-      flex: 1; display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 11px; cursor: pointer;
-      color: var(--ink); text-align: left; font: inherit;
-      background: var(--panel-2); border: 1px solid transparent; border-radius: 10px; transition: border-color .15s, background .15s;
-    }
-    .slot-tab.active { border-color: var(--accent); background: rgba(255,255,255,0.08); }
-    .slot-tab .chip { width: 24px; height: 24px; border-radius: 50%; background-size: cover; flex: none; border: 1px solid var(--line-2); }
-    .slot-tab .meta { min-width: 0; }
-    .slot-tab .meta b { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink-dim); }
-    .slot-tab .meta span { display: block; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    #swatch-grid { display: block; max-height: 42vh; overflow-y: auto; scrollbar-width: thin; padding-right: 2px; }
-    .sw-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; }
-    .sw-head { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-dim);
-      font-weight: 600; font-family: ui-monospace, monospace; margin: 13px 2px 7px; }
-    .sw-head:first-child { margin-top: 2px; }
-    .swatch { min-width: 44px; min-height: 44px; aspect-ratio: 1; padding: 0; border-radius: 8px; background-size: cover; cursor: pointer; position: relative; border: 2px solid transparent; transition: border-color .15s, transform .12s; }
-    .swatch:hover { transform: scale(1.06); }
-    .swatch.selected { border-color: var(--accent); }
-    .swatch .tip { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #000; color: var(--ink); font-size: 10.5px; padding: 3px 7px; border-radius: 5px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 5; }
-    .swatch:hover .tip { opacity: 1; }
-
-    /* ---------- CLIENT panel ---------- */
+    /* ---------- control panel ---------- */
     #panel {
-      position: fixed; bottom: 16px; right: 16px; width: 320px; max-height: calc(100dvh - 32px); z-index: 12;
-      display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);
-      border-radius: 18px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden;
-      backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%);
+      position: fixed; z-index: 10; top: 20px; right: 20px; width: 348px; max-height: calc(100dvh - 40px);
+      display: flex; flex-direction: column;
+      background: var(--surface); border: 1px solid rgb(255 255 255 / 0.7); border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      -webkit-backdrop-filter: blur(22px) saturate(1.2); backdrop-filter: blur(22px) saturate(1.2);
     }
-    .ph { padding: 18px 20px 14px; display: flex; align-items: center; gap: 10px; cursor: default; }
-    .ph .brand { font-size: 9.5px; letter-spacing: 0.32em; text-transform: uppercase; font-weight: 700;
-      background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .ph h1, .ph #product-name { font-family: "Fraunces", Georgia, serif; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin-top: 2px; line-height: 1.08; }
-    .ph #product-name { display: block; width: 100%; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
-    .ph .htext { flex: 1; min-width: 0; }
-    .ph .handle { display: none; width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-dim); align-items: center; justify-content: center; cursor: pointer; flex: none; }
-    .ph .handle svg { width: 16px; height: 16px; transition: transform .2s; }
+    .head { display: flex; align-items: flex-start; gap: 12px; padding: 24px 24px 4px; }
+    .head .titles { flex: 1; min-width: 0; }
+    #kind { margin: 0 0 2px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+    h1 { margin: 0; font: 400 40px/1.02 var(--serif); letter-spacing: -0.01em; }
+    #price { margin: 10px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 14px; color: var(--ink-2); }
+    #price .amount { font-size: 17px; font-weight: 600; color: var(--ink); }
+    #price .note { font-size: 12px; padding: 1px 8px; border: 1px solid var(--line-strong); border-radius: 999px; }
+    #sheet-toggle { display: none; }
 
-    .pbody { padding: 4px 20px 6px; overflow-y: auto; scrollbar-width: thin; }
-    .pfoot { padding: 12px 16px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid var(--line); }
-    .pfoot button { min-height: 44px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 9px; padding: 10px 0; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--ink); transition: background .15s; }
-    .pfoot button:hover { background: rgba(255,255,255,0.08); }
-    .pfoot button.primary { grid-column: 1 / -1; background: var(--accent-grad); border: 0; color: #0b0710; font-weight: 700; }
-    #btn-screenshot { grid-column: 1 / -1; }
+    .body { padding: 14px 24px 6px; overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain; }
+    fieldset { border: 0; margin: 0; padding: 14px 0 16px; border-top: 1px solid var(--line); min-width: 0; }
+    legend { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; padding: 0; margin-bottom: 12px; float: left; }
+    legend + * { clear: both; }
+    legend .name, .group-label { font-size: 13px; font-weight: 600; letter-spacing: 0.01em; }
+    legend .current { font-size: 13px; color: var(--ink-2); }
 
-    /* ---------- DEV panel (hidden by default) ---------- */
-    #studio {
-      position: fixed; bottom: 16px; left: 16px; width: 420px; max-height: calc(100dvh - 32px); z-index: 11;
-      display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line);
-      border-radius: 18px; box-shadow: 0 18px 50px rgba(0,0,0,0.55); overflow: hidden; font-size: 12px;
-      backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%);
+    .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+    .swatch { position: relative; display: block; width: 40px; height: 40px; cursor: pointer; }
+    .swatch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .swatch .chip {
+      position: absolute; inset: 0; border-radius: 50%;
+      background:
+        radial-gradient(circle at 32% 26%, rgb(255 255 255 / 0.38), transparent 46%),
+        radial-gradient(circle at 70% 80%, rgb(0 0 0 / 0.22), transparent 60%),
+        var(--swatch);
+      box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.14);
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
     }
-    #studio.hidden { display: none; }
-    #studio .sh { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
-    #studio .sh .t { font-size: 9.5px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; font-family: ui-monospace, monospace; }
-    #studio .sh .fps { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent-2); }
-    #studio .sbody { padding: 14px 16px; overflow-y: auto; scrollbar-width: thin; }
+    .swatch:hover .chip { transform: scale(1.06); }
+    .swatch input:checked + .chip { box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.14), 0 0 0 2px var(--surface-solid), 0 0 0 4px var(--ink); }
+    .swatch input:focus-visible + .chip { outline: 2px solid var(--ink); outline-offset: 6px; }
 
-    #feature-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
-    .feat { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; background: var(--panel-2); border: 1px solid transparent; border-radius: 8px; font-size: 11.5px; color: var(--ink-dim); transition: all .15s; user-select: none; }
-    .feat .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.2); flex: none; }
-    .feat.on { color: var(--ink); border-color: rgba(103,232,249,0.4); }
-    .feat.on .dot { background: var(--accent-2); box-shadow: 0 0 7px var(--accent-2); }
+    .group { padding: 14px 0 16px; border-top: 1px solid var(--line); }
+    .group-label { display: block; margin-bottom: 12px; }
+    #views { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; background: rgb(28 26 23 / 0.06); border-radius: 12px; }
+    #views button { min-height: 36px; padding: 0 4px; border: 0; border-radius: 9px; background: transparent; font-size: 13px; font-weight: 500; color: var(--ink-2); cursor: pointer; transition: background 0.16s ease, color 0.16s ease; }
+    #views button:hover { color: var(--ink); }
+    #views button[aria-pressed="true"] { background: var(--surface-solid); color: var(--ink); box-shadow: 0 1px 3px rgb(60 45 25 / 0.16); }
 
-    /* ---------- hide-all UI toggle ---------- */
-    #ui-toggle {
-      position: fixed; top: 16px; right: 16px; z-index: 20; width: 44px; height: 44px; border-radius: 50%; padding: 0;
-      display: flex; align-items: center; justify-content: center; background: var(--panel); border: 1px solid var(--line);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4); color: var(--ink); cursor: pointer;
+    .foot { padding: 14px 24px 20px; border-top: 1px solid var(--line); }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .actions button { min-height: 46px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.16s ease, border-color 0.16s ease; }
+    .actions .primary { border: 1px solid var(--ink); background: var(--ink); color: #fffdfa; }
+    .actions .primary:hover { background: #33302b; }
+    .actions .ghost { border: 1px solid var(--line-strong); background: transparent; }
+    .actions .ghost:hover { background: rgb(28 26 23 / 0.05); }
+    .actions .wide { grid-column: 1 / -1; }
+    .actions button[hidden] { display: none; }
+    .credit { margin: 14px 0 0; font-size: 13px; color: var(--ink-2); }
+    .credit a { color: var(--ink); font-weight: 500; text-underline-offset: 3px; }
+    .body .credit { display: none; }
+
+    /* ---------- photo render status ---------- */
+    #status {
+      --progress: 0;
+      position: fixed; z-index: 9; left: 20px; bottom: 20px; display: flex; align-items: center; gap: 9px;
+      padding: 8px 14px 8px 10px; border-radius: 999px; background: var(--surface); border: 1px solid rgb(255 255 255 / 0.7);
+      box-shadow: var(--shadow); font-size: 13px; font-weight: 500; color: var(--ink-2);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
     }
-    #ui-toggle svg { width: 18px; height: 18px; }
-    #ui-toggle::after { content: ""; position: absolute; width: 26px; height: 2px; border-radius: 2px; background: currentColor; transform: rotate(-45deg); opacity: 0; transition: opacity .15s; box-shadow: 0 -2px 0 0 var(--panel); }
-    body.ui-hidden #ui-toggle::after { opacity: 1; }
-    body.ui-hidden #panel,
-    body.ui-hidden #studio,
-    body.ui-hidden #ui-toggle,
-    body.ui-hidden #toast,
-    body.ui-hidden #pt-spinner,
-    body.ui-hidden #tool-rail { display: none !important; }
-    /* Embed contract: the canvas is the only client surface. This also catches
-       dynamically injected onboarding, assistant, hotspot and help overlays. */
-    body.ui-hidden > :not(#app):not(#fatal-state) { display: none !important; }
-    /* when the dev panel is open it'd collide with the toggle — nudge the toggle left */
-    body:not(.dev-on) #ui-toggle { right: 16px; }
+    #status[data-state="hidden"], #status:not([data-state]) { opacity: 0; transform: translateY(6px); pointer-events: none; }
+    #status .ring { width: 16px; height: 16px; border-radius: 50%; flex: none;
+      background: conic-gradient(var(--ink) calc(var(--progress) * 1turn), rgb(28 26 23 / 0.16) 0);
+      -webkit-mask: radial-gradient(circle, transparent 4.5px, #000 5px); mask: radial-gradient(circle, transparent 4.5px, #000 5px); }
+    #status[data-state="preparing"] .ring { background: rgb(28 26 23 / 0.16); }
+    #status[data-state="done"] { color: var(--ink); }
 
-    /* ---------- toast / spinner ---------- */
-     #toast { position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(8px); z-index: 30; background: rgba(0,0,0,0.88); color: var(--ink); font-size: 12.5px; padding: 9px 16px; border-radius: 9px; opacity: 0; transition: all .25s; pointer-events: none; }
-    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #pt-spinner { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(6px); z-index: 24; display: none; align-items: center; gap: 9px; padding: 7px 14px 7px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); font-size: 11.5px; color: var(--ink-dim); pointer-events: none; opacity: 0; transition: opacity .25s, transform .25s; }
-    #pt-spinner.show { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); }
-    #pt-spinner .s { width: 14px; height: 14px; border-radius: 50%; flex: none; border: 2px solid rgba(255,255,255,0.16); border-top-color: var(--accent); animation: spin .8s linear infinite; }
-    #pt-spinner .pt-bar { width: 90px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.14); overflow: hidden; flex: none; }
-    #pt-spinner .pt-bar i { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left center; background: var(--accent); border-radius: 999px; transition: transform .1s linear; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ---------- AR overlay ---------- */
-    #ar-overlay { position: fixed; inset: 0; z-index: 70; display: none; background: var(--bg); }
-    #ar-overlay.show { display: block; }
-    #ar-viewer { width: 100%; height: 100%; background: radial-gradient(120% 120% at 50% 30%, #14161c, var(--bg)); }
-    #ar-close { position: absolute; top: 16px; left: 16px; z-index: 71; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; background: var(--panel); border: 1px solid var(--line); color: var(--ink); font-size: 16px; cursor: pointer; }
-    #ar-prompt { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 71; font-size: 12px; color: var(--ink-dim); pointer-events: none; }
-
-    /* ---------- PHONE PORTRAIT: collapsed bottom sheet ---------- */
-    @media (max-width: 599px) {
-      #panel {
-        top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 84dvh;
-        border-radius: 18px 18px 0 0; border-bottom: 0;
-        padding-bottom: env(safe-area-inset-bottom);
-      }
-      .ph { cursor: pointer; padding: 14px 16px; }
-      .ph .handle { display: flex; }
-      /* collapsed by default: only the header shows */
-      #panel .pbody, #panel .pfoot { display: none; }
-      #panel.open .pbody { display: block; max-height: 58dvh; }
-      #panel.open .pfoot { display: grid; }
-      #panel.open .ph .handle svg { transform: rotate(180deg); }
-      .sw-row { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-      #studio { top: 12px; left: 12px; right: 12px; width: auto; max-height: 42dvh; } /* leave the product visible */
-      #ui-toggle { top: auto; bottom: 76px; right: 12px; } /* clear of the settings panel, above the bottom sheet */
+    #toast {
+      position: fixed; z-index: 30; left: 50%; bottom: 24px; translate: -50% 8px; max-width: calc(100vw - 32px);
+      padding: 10px 16px; border-radius: 12px; background: var(--ink); color: #fffdfa; font-size: 14px;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease, translate 0.2s ease;
     }
+    #toast.show { opacity: 1; translate: -50% 0; }
 
-    /* ---------- TABLET / PHONE LANDSCAPE: persistent right drawer ---------- */
-    @media (min-width: 600px) and (max-width: 899px) {
-      #panel { top: 12px; right: 12px; bottom: 12px; width: min(360px, 42vw); max-height: none; }
-      #panel .pbody { min-height: 0; }
-      #swatch-grid { max-height: none; }
-      .sw-row { grid-template-columns: repeat(5, 1fr); }
-      #studio { left: 12px; bottom: 12px; width: min(360px, 42vw); max-height: 42dvh; }
-      #ui-toggle { top: 12px; right: calc(min(360px, 42vw) + 24px); }
+    /* ---------- loading and failure ---------- */
+    #loader { position: fixed; inset: 0; z-index: 40; display: grid; place-content: center; justify-items: center; gap: 18px; background: var(--backdrop); transition: opacity 0.6s ease; }
+    #loader.done { opacity: 0; pointer-events: none; }
+    #loader p { margin: 0; font: 400 30px/1 var(--serif); }
+    #loader .bar { width: 168px; height: 2px; border-radius: 2px; background: rgb(28 26 23 / 0.14); overflow: hidden; }
+    #loader .bar i { display: block; height: 100%; background: var(--ink); transform: scaleX(0.04); transform-origin: left; transition: transform 0.3s ease; }
+    #fatal { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; background: var(--backdrop); }
+    #fatal[hidden] { display: none; }
+    #fatal h2 { margin: 0; font: 400 30px/1.1 var(--serif); }
+    #fatal p { margin: 0 0 8px; max-width: 40ch; color: var(--ink-2); }
+    #fatal button { min-height: 46px; padding: 0 20px; border: 1px solid var(--ink); border-radius: 12px; background: var(--ink); color: #fffdfa; font-weight: 600; cursor: pointer; }
+
+    /* ---------- AR ---------- */
+    #ar-overlay { position: fixed; inset: 0; z-index: 60; background: var(--backdrop); }
+    #ar-overlay[hidden] { display: none; }
+    #ar-viewer { width: 100%; height: 100%; background: var(--backdrop); }
+    #ar-close { position: absolute; top: 16px; left: 16px; width: 46px; height: 46px; border: 1px solid var(--line-strong); border-radius: 50%; background: var(--surface-solid); font-size: 18px; cursor: pointer; }
+    #ar-overlay p { position: absolute; left: 0; right: 0; bottom: 24px; margin: 0; text-align: center; font-size: 14px; color: var(--ink-2); pointer-events: none; }
+
+    html[data-embed="1"] #panel, html[data-embed="1"] #status { display: none; }
+
+    /* ---------- phones: bottom sheet ---------- */
+    @media (max-width: 719px) {
+      #panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 50dvh; border-radius: var(--radius) var(--radius) 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
+      .head { align-items: center; padding: 16px 18px 2px; }
+      h1 { font-size: 30px; }
+      #price { margin-top: 4px; }
+      #sheet-toggle { display: grid; place-items: center; flex: none; width: 46px; height: 46px; border: 1px solid var(--line-strong); border-radius: 50%; background: transparent; cursor: pointer; }
+      #sheet-toggle svg { width: 18px; height: 18px; transition: rotate 0.2s ease; }
+      #panel.collapsed #sheet-toggle svg { rotate: 180deg; }
+      #panel.collapsed .body, #panel.collapsed .foot { display: none; }
+      #panel.collapsed .head { padding-bottom: 14px; }
+      .body { padding: 10px 18px 2px; }
+      fieldset, .group { padding: 12px 0 14px; }
+      .swatches { flex-wrap: nowrap; gap: 8px; margin: -6px -18px; padding: 6px 18px; overflow-x: auto; scrollbar-width: none; }
+      .swatch { flex: none; width: 44px; height: 44px; }
+      #views button { min-height: 44px; }
+      .foot { padding: 10px 18px 12px; }
+      .actions { display: flex; }
+      .actions button { flex: 1; min-height: 46px; padding: 0 6px; }
+      .foot .credit { display: none; }
+      .body .credit { display: block; margin: 0; padding: 12px 0 14px; border-top: 1px solid var(--line); }
+      #price .note { display: none; }
+      #kind { display: none; }
+      #status { top: calc(14px + env(safe-area-inset-top)); bottom: auto; left: 14px; }
+      #toast { bottom: auto; top: calc(14px + env(safe-area-inset-top)); }
     }
-
-    @media (min-width: 900px) {
-      #panel .pbody { min-height: 0; }
+    @media (max-height: 560px) and (min-width: 720px) {
+      .head { padding-top: 16px; }
+      h1 { font-size: 30px; }
+      fieldset, .group { padding: 10px 0 12px; }
     }
-
-    @media (max-height: 520px) and (orientation: landscape) {
-      #panel { top: 8px; bottom: 8px; }
-      .ph { padding: 10px 14px; }
-      .pbody { padding: 2px 14px 4px; }
-      #swatch-grid { max-height: none; }
-      .section { margin-bottom: 10px; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
     }
   </style>
 </head>
 <body>
-  <div id="app"></div>
+  <main id="app" aria-label="3D view of the Fern Room salon station. Drag to orbit, scroll or pinch to zoom."></main>
 
-  <!-- ===== CLIENT panel (desktop: left / mobile: bottom sheet) ===== -->
-  <aside id="panel">
-    <div class="ph" id="ph">
-      <div class="htext">
-        <button type="button" id="product-name" aria-label="Switch product">Loading…</button>
+  <aside id="panel" aria-label="Configure">
+    <div class="head">
+      <div class="titles">
+        <p id="kind"></p>
+        <h1 id="title">Fern Room</h1>
+        <p id="price"><span class="amount"></span><span class="lead"></span><span class="note" hidden>Sample pricing</span></p>
       </div>
-      <button class="handle" id="sheet-toggle" aria-label="Expand controls">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>
+      <button type="button" id="sheet-toggle" aria-expanded="true" aria-label="Show or hide options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
     </div>
-    <div class="pbody">
-      <div class="section">
-        <div class="label">Material</div>
-        <div class="slot-tabs" id="slot-tabs"></div>
-        <div id="swatch-grid"></div>
+    <div class="body">
+      <div id="slots"></div>
+      <div class="group" role="group" aria-labelledby="views-label">
+        <span class="group-label" id="views-label">View</span>
+        <div id="views"></div>
       </div>
-      <div class="section">
-        <div class="label">Camera</div>
-        <div class="seg" id="cam-seg">
-          <button data-cam="hero" class="active">Hero</button>
-          <button data-cam="front">Front</button>
-          <button data-cam="detail">Detail</button>
-          <button data-cam="back">Back</button>
-        </div>
-      </div>
+      <p class="credit">Built by <a href="https://niallarnfield.com/3d-product-configurator/" target="_blank" rel="noopener">Niall Arnfield</a>. Want one for your products?</p>
     </div>
-    <div class="pfoot">
-      <button id="btn-share">Share</button>
-      <button id="btn-ar">View in AR</button>
-      <button id="btn-screenshot">Save image</button>
+    <div class="foot">
+      <div class="actions">
+        <button type="button" class="ghost wide" id="btn-ar" hidden>View in AR</button>
+        <button type="button" class="primary" id="btn-save">Save image</button>
+        <button type="button" class="ghost" id="btn-share">Share</button>
+      </div>
+      <p class="credit">Built by <a href="https://niallarnfield.com/3d-product-configurator/" target="_blank" rel="noopener">Niall Arnfield</a>. Want one for your products?</p>
     </div>
   </aside>
 
-  <!-- ===== SETTINGS panel (bottom-left) ===== -->
-  <aside id="studio">
-    <div class="sh"><span class="t">Settings</span><span class="fps" id="fps">—</span></div>
-    <div class="sbody">
-      <div class="section" id="photo-quality" style="display:none">
-        <div class="label">Photo quality <span id="pq-samples" style="float:right;font-family:ui-monospace,monospace;text-transform:none;letter-spacing:0;color:var(--accent-2)"></span></div>
-        <div id="pq-controls" style="display:flex;flex-direction:column;gap:8px"></div>
-      </div>
-    </div>
-  </aside>
+  <div id="status" role="status"><i class="ring" aria-hidden="true"></i><span></span></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 
-  <button id="ui-toggle" aria-label="Hide or show the interface" title="Hide / show interface">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-  </button>
-
-  <div id="ar-overlay">
-    <model-viewer id="ar-viewer" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.1" environment-image="neutral"></model-viewer>
-    <button id="ar-close" aria-label="Close AR">✕</button>
-    <div id="ar-prompt">Tap the AR icon to place it in your room</div>
+  <div id="ar-overlay" hidden>
+    <model-viewer id="ar-viewer" ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed" camera-controls touch-action="pan-y" shadow-intensity="1" environment-image="neutral"></model-viewer>
+    <button type="button" id="ar-close" aria-label="Close AR view">✕</button>
+    <p>Tap the AR button to place it in your room at full size</p>
   </div>
 
-  <div id="toast" role="status" aria-live="polite"></div>
-  <div id="pt-spinner"><span>Rendering…</span><div class="pt-bar"><i></i></div></div>
+  <div id="loader"><p>Fern Room</p><div class="bar"><i></i></div></div>
+  <div id="fatal" role="alert" hidden><h2></h2><p></p><button type="button" onclick="location.reload()">Reload</button></div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

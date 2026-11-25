@@ -25,11 +25,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run validate:catalogue
+      - run: npm run check
       - run: npm run build
         env:
           BASE_PATH: /threejs-product-configurator/
-      - run: npm run check:build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

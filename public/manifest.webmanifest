@@ -1,13 +1,13 @@
 {
-  "name": "3D Product Configurator",
-  "short_name": "Configurator",
-  "description": "Real-time and path-traced 3D product configurator for three.js.",
+  "name": "Fern Room configurator",
+  "short_name": "Fern Room",
+  "description": "Configure a salon station in 3D with a path-traced photo render.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0b0b0c",
-  "theme_color": "#0b0b0c",
+  "background_color": "#ebe5db",
+  "theme_color": "#ebe5db",
   "icons": [
     {
       "src": "icons/icon-192.png",

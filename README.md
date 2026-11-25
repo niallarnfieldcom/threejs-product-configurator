@@ -1,55 +1,65 @@
 # three.js product configurator
 
-A data-driven 3D product configurator built on [three.js](https://threejs.org/). Add a product with a GLB and a few lines of config, and customers get multi-slot finish selection, a path-traced Photo Mode, AR, share links and a spec sheet, on desktop and mobile.
+A realistic 3D product configurator built on [three.js](https://threejs.org/). It draws with a fast live renderer while you move, then resolves a path-traced photo render in the browser as soon as the view is still: true mirror reflections, glass, brushed steel and soft studio shadows.
 
 **[Live demo](https://niallarnfieldcom.github.io/threejs-product-configurator/)**
 
-![The configurator showing the Fern Room salon station: two oxblood leather styling chairs at a double-sided walnut station with a mirror and fern planter](docs/preview.jpg)
+![The Fern Room salon station, path traced in the browser: two oxblood leather styling chairs at a double-sided walnut station with a mirror and fern planter, on a light studio backdrop](docs/preview.jpg)
 
-The demo opens on the **Fern Room**, a two-chair salon station modelled in Blender for this project: switch the chairs' leather and the station's walnut while the glass, steel, ceramic and fern planting keep their authored materials. `tools/prepare-scene.py` turns the Blender export into configurator slots. Five simpler sample products (lounge chair, bar stool, sofa, sideboard, desk) are generated from primitives by `tools/generate-sample-products.py`. Prices are sample values.
+The demo scene is the **Fern Room**, a two-chair salon station modelled in Blender for this project. Choose the leather and the timber; the steel, glass, ceramic and planting keep the materials they were authored with. Prices are sample values.
 
-## Features
+## How it works
 
-- **Data-driven catalogue.** Products are registry entries in `src/products.js`. Mesh names in the GLB are the material slots, so adding a product needs no code.
-- **Multi-slot finishes.** Up to four customer-configurable slots per product (`a`–`d`), each limited to fabric or laminate materials. Fixed parts such as `chrome` or `black_metal` get a physically based finish inferred from their name.
-- **Textured and colour-only materials.** KTX2-compressed PBR sets for the live view, JPEG copies for AR, plus exact-colour finishes for catalogues specified as colours.
-- **Photo Mode.** A progressive path tracer ([three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer)) on capable desktops, loaded lazily so phones never download it.
-- **Runtime profiles.** The renderer picks reduced, balanced or high quality from the device and GPU, and only path traces on explicit request.
-- **Shopper tools.** Camera presets, product search, hotspots, dimensions, share link and QR code, save image, AR via [model-viewer](https://modelviewer.dev/) (GLB and USDZ), spec sheet, shortlist, and English, French, Spanish and German labels.
-- **Commerce hand-off.** Prices show only when marked approved. Quote and lead forms post to an endpoint you configure, and never claim a request was sent when it was only prepared.
-- **Embeddable.** Drop it in an iframe and drive it with `postMessage` (`configurator:setProduct`, `configurator:setAccent`). See `public/embed-example.html`.
-- **Authoring studio.** `authoring.html` is a local scene-building tool for arranging products.
+| File | Job |
+| --- | --- |
+| `src/scene-config.js` | The scene as data: model, configurable slots, finishes, camera views, price, and the URL state helpers. |
+| `src/studio.js` | The photo studio: a procedural HDR panorama of soft boxes, a seamless floor, and a shadow light for the live renderer. No HDRI download. |
+| `src/finishes.js` | Applies finishes. A colour finish turns the authored texture into a neutral grain map and tints it, so new colours keep the leather's mottling and the timber's figure. |
+| `src/photo-tracer.js` | The path-traced photo render ([three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer)), loaded only on devices that will use it. |
+| `src/capabilities.js` | Chooses a render tier per device: `basic`, `live` or `traced`. |
+| `src/main.js` | Renderer, camera, UI wiring, share links, AR and embed messaging. |
+
+A few decisions worth copying:
+
+- **One lighting description, two renderers.** The path tracer importance-samples the studio panorama, so its soft boxes behave as area lights. The live renderer prefilters a version of the same panorama and adds one shadow-casting light aligned with the key.
+- **The photo render is automatic.** It starts 0.2 s after the camera stops, accumulates off-screen, and cross-fades over the live frame once it is clean enough to show. Any interaction returns to the live renderer instantly.
+- **It stops when it is done.** Tracing ends at 480 samples and the GPU goes idle. Phones and low-power devices never download the tracer at all.
+- **Small payload.** The whole scene is one 4 MB Draco-compressed GLB. The initial JavaScript is about 220 KB gzipped, and the tracer is a separate 61 KB chunk.
+- **State lives in the URL.** `?a=cognac&b=oak&view=chair` restores a configuration, and invalid values fall back to the defaults.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev            # http://127.0.0.1:5174/
-npm test               # registry, URL state and runtime-profile tests
-npm run validate:catalogue
-npm run build && npm run check:build
+npm run dev      # http://localhost:5174/
+npm test         # scene config, URL state and render-tier rules
+npm run build
 ```
 
-Pick a product with `?product=fern_room`, `lounge_chair`, `bar_stool`, `sofa`, `sideboard` or `desk`.
+Add `?render=live` to stay on the live renderer, or `?render=traced` to force the photo render.
 
-## Adding a product
+## Use your own product
 
-1. Export a GLB to `public/assets/<product-id>/model.glb`, with one node per material slot named `a`, `b`, `chrome`, `black_metal` and so on.
-2. Add an entry to `src/products.js` with its slots, which slots take fabric or laminate, default materials and real-world height in metres.
-3. Run `npm run validate:catalogue`, which checks every declared slot exists in the GLB and every default material suits its slot.
+1. Model the product with one object per configurable part, named `a`, `b` and so on. `tools/prepare-scene.py` shows how the Fern Room was split by material in Blender (`npm run prepare:scene -- path/to/export.glb`).
+2. Export a Draco-compressed GLB to `public/assets/<id>/model.glb`.
+3. Edit `src/scene-config.js`: the model path, the slots and their finishes, and the camera views.
+4. Run `npm test`, which checks the GLB has a node for every slot.
 
-`tools/generate-sample-products.py` shows the naming convention end to end. Rebuild the samples with `npm run generate:products` (needs Blender on your PATH).
+## Embedding
 
-## Configuration
+Add `?embed=1` to hide the built-in panel and drive the configurator from your own page with `postMessage`. `public/embed-example.html` is a working example ([live](https://niallarnfieldcom.github.io/threejs-product-configurator/embed-example.html)).
 
-Set these on `window` before the app loads:
+| Message | Direction | Payload |
+| --- | --- | --- |
+| `configurator:ready` | out | `scene`, `slots` (with finishes), `views` |
+| `configurator:change` | out | `state` (scene and chosen finish names) |
+| `configurator:event` | out | analytics events: `ready`, `finish`, `view`, `share`, `save_image`, `ar_open` |
+| `configurator:setFinish` | in | `slot`, `finish` |
+| `configurator:setView` | in | `view` |
 
-| Global | Purpose |
-| --- | --- |
-| `CONFIGURATOR_BRAND` | `name`, `accent`, `logo`, `quoteEndpoint`, `leadEndpoint`, `parentOrigin` |
-| `CONFIGURATOR_PRICING` | Per-product `{ price, leadTime, stock, approved }`, overriding the registry |
-| `CONFIGURATOR_ANALYTICS` | Function that receives configurator events (also pushed to `dataLayer`) |
-| `CONFIGURATOR_AI` | `endpoint` for the optional product helper's unmatched questions |
+Messages are only exchanged with the origin given in `?parentOrigin=` or `window.CONFIGURATOR_BRAND.parentOrigin`.
+
+Optional globals, set before the app loads: `CONFIGURATOR_PRICING` (`{ price, leadTime, approved }`; prices show only when `approved` is true) and `CONFIGURATOR_ANALYTICS` (a function that receives each event; events are also pushed to `dataLayer`).
 
 Set `BASE_PATH` when building for a sub-path, for example `BASE_PATH=/threejs-product-configurator/ npm run build` for GitHub Pages.
 
@@ -63,4 +73,4 @@ Built by [Niall Arnfield](https://niallarnfield.com), who designs and builds 3D 
 
 Copyright (c) 2026 Niall Arnfield. All rights reserved. The source is published to be read and linked to, not reused: see [LICENSE](LICENSE). For a configurator built on this framework, or a licence to use it, get in touch through [niallarnfield.com](https://niallarnfield.com).
 
-Third-party components keep their own licences, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). The HDRIs and most materials are CC0 from Poly Haven and ambientCG. The Fern Room and the other sample products were made for this project.
+Third-party components keep their own licences, listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -85,7 +85,10 @@ for slot, objs in groups.items():
     # Joined parts may carry several material slots; keep one material per part.
     mats = {joined.data.materials[p.material_index].name for p in joined.data.polygons}
     if slot in ("a", "b"):
-        keep = joined.data.materials[joined.data.polygons[0].material_index]
+        # Prefer the textured material (the leather, not its plain welt).
+        used_mats = [joined.data.materials[i] for i in sorted({p.material_index for p in joined.data.polygons})]
+        textured = [m for m in used_mats if m.use_nodes and any(n.type == "TEX_IMAGE" for n in m.node_tree.nodes)]
+        keep = (textured or used_mats)[0]
         joined.data.materials.clear()
         joined.data.materials.append(keep)
         for p in joined.data.polygons:
