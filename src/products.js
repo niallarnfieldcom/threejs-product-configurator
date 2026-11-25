@@ -30,6 +30,22 @@ const P = (id, name, category, targetHeight, slots, slotFinish, defaults, extra 
 const SAMPLE_PRICE = (price, leadTime) => ({ price, leadTime, pricing: { approved: true, sample: true } });
 
 export const PRODUCTS = {
+  // Poly Haven "Barber Shop Chair 01" (CC0), split into slots by
+  // tools/prepare-barber-chair.py. `trim` keeps its original brass and carving.
+  barber_chair: P(
+    "barber_chair", "Barber Chair", "Seating", 1.49,
+    ["a", "b"],
+    { a: "fabric", b: "laminate" },
+    { a: "pbr_leather", b: "acg_wood095" },
+    {
+      ...SAMPLE_PRICE("1,450", "6–8 weeks"),
+      hotspots: [
+        { label: "Tufted leather upholstery", pos: [0, 0.75, 0] },
+        { label: "Adjustable headrest", pos: [0, 1.4, -0.3] },
+        { label: "Brass fittings and carved panels", pos: [0.3, 0.5, 0.2] },
+      ],
+    },
+  ),
   lounge_chair: P(
     "lounge_chair", "Lounge Chair", "Seating", 0.84,
     ["a", "b", "black_metal"],
@@ -74,7 +90,7 @@ export const PRODUCTS = {
   ),
 };
 
-export const DEFAULT_PRODUCT = "lounge_chair";
+export const DEFAULT_PRODUCT = "barber_chair";
 
 // The active product is URL-driven (?product=<id>) so the catalogue dropdown can
 // switch products with a clean reload (full reinit of geometry / materials / PT),
