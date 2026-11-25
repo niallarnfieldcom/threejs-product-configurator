@@ -10,10 +10,24 @@ test("desktop GPUs get the path-traced photo render", () => {
   assert.equal(tier.pathTracing, true);
 });
 
-test("phones and tablets stay on the live renderer", () => {
+test("capable phones and tablets get a lighter photo render", () => {
   const tier = chooseRenderTier({ ...desktop, isMobile: true });
-  assert.equal(tier.key, "live");
-  assert.equal(tier.pathTracing, false);
+  assert.equal(tier.key, "mobile");
+  assert.equal(tier.pathTracing, true);
+  assert.ok(tier.photo.maxPixels < chooseRenderTier(desktop).photo.maxPixels);
+  assert.ok(tier.photo.maxSamples < chooseRenderTier(desktop).photo.maxSamples);
+});
+
+test("devices that cannot path trace stay on the live renderer", () => {
+  assert.equal(chooseRenderTier({ ...desktop, floatRenderTargets: false }).key, "live");
+  assert.equal(chooseRenderTier({ ...desktop, isMobile: true, deviceMemory: 3 }).key, "live");
+  assert.equal(chooseRenderTier({ ...desktop, isMobile: true, floatRenderTargets: false }).pathTracing, false);
+});
+
+test("a crashed photo render keeps the device on the live renderer", () => {
+  assert.equal(chooseRenderTier({ ...desktop, photoRenderFailed: true }).key, "live");
+  assert.equal(chooseRenderTier({ ...desktop, isMobile: true, photoRenderFailed: true }).key, "live");
+  assert.equal(chooseRenderTier({ ...desktop, photoRenderFailed: true, requested: "traced" }).key, "traced");
 });
 
 test("software rendering, WebGL 1, data saver and low memory fall back to basic", () => {
@@ -26,6 +40,7 @@ test("software rendering, WebGL 1, data saver and low memory fall back to basic"
 
 test("a visitor can ask for a tier, but a constrained device stays on basic", () => {
   assert.equal(chooseRenderTier({ ...desktop, requested: "live" }).key, "live");
-  assert.equal(chooseRenderTier({ ...desktop, isMobile: true, requested: "traced" }).key, "traced");
+  assert.equal(chooseRenderTier({ ...desktop, isMobile: true, requested: "traced" }).key, "mobile");
+  assert.equal(chooseRenderTier({ ...desktop, floatRenderTargets: false, requested: "traced" }).key, "live");
   assert.equal(chooseRenderTier({ ...desktop, webgl2: false, requested: "traced" }).key, "basic");
 });

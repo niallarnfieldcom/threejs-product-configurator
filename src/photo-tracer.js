@@ -19,14 +19,25 @@ import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 
 const REVEAL_AT = 6;        // samples before the traced image starts to show
 const FADE_MS = 450;        // cross-fade from the live frame to the traced one
-const DENOISE_UNTIL = 220;  // the edge-aware denoiser eases off by this many samples
-const MAX_PIXELS = 2.3e6;   // cap the traced resolution (≈ 1080p) on very large canvases
 
-export function createPhotoTracer(renderer, scene, camera, { studio, maxSamples = 480 } = {}) {
+/**
+ * Quality options come from the device's render tier (see capabilities.js):
+ *   maxPixels  cap on the traced resolution; the image is scaled up to the canvas
+ *   maxSamples where tracing stops
+ *   bounces / transmissiveBounces  path length
+ *   tiles      each call traces 1/tiles² of the frame, so the page stays responsive
+ *   denoiseUntil  the edge-aware denoiser eases off by this many samples; set it
+ *                 above maxSamples to keep some denoising in the final image
+ *   denoiseStrength  1 for a full-resolution trace; higher when a low-resolution
+ *                 trace is scaled up and its noise would be magnified
+ */
+export function createPhotoTracer(renderer, scene, camera, {
+  studio, maxPixels = 2.3e6, maxSamples = 480, bounces = 6, transmissiveBounces = 8, tiles = 2, denoiseUntil = 220, denoiseStrength = 1,
+} = {}) {
   const tracer = new WebGLPathTracer(renderer);
-  tracer.tiles.set(2, 2);            // each call traces a quarter of the frame → stays responsive
-  tracer.bounces = 6;
-  tracer.transmissiveBounces = 8;    // glass bottle and its liquid
+  tracer.tiles.set(tiles, tiles);
+  tracer.bounces = bounces;
+  tracer.transmissiveBounces = transmissiveBounces; // glass bottle and its liquid
   tracer.filterGlossyFactor = 0.4;   // tame fireflies from the mirror and bright steel
   tracer.multipleImportanceSampling = true;
   tracer.dynamicLowRes = false;
@@ -46,14 +57,14 @@ export function createPhotoTracer(renderer, scene, camera, { studio, maxSamples 
     const now = performance.now();
     if (!revealStart) revealStart = now;
     const opacity = Math.min(1, (now - revealStart) / FADE_MS);
-    const ease = Math.max(0, 1 - tracer.samples / DENOISE_UNTIL);
+    const ease = Math.max(0, 1 - tracer.samples / denoiseUntil);
     const useDenoise = ease > 0.02;
     const material = useDenoise ? denoiseQuad.material : quad.material;
     if (useDenoise) {
       material.map = target.texture;
-      material.sigma = 2.2;
+      material.sigma = 2.2 * Math.sqrt(denoiseStrength);
       material.kSigma = 1;
-      material.threshold = 0.012 + 0.03 * ease;
+      material.threshold = (0.012 + 0.03 * ease) * denoiseStrength;
     }
     material.opacity = opacity;
     // Explicit straight-alpha blend over the live frame already on the canvas.
@@ -74,7 +85,7 @@ export function createPhotoTracer(renderer, scene, camera, { studio, maxSamples 
 
   function fitResolution() {
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    tracer.renderScale = Math.min(1, Math.sqrt(MAX_PIXELS / Math.max(1, size.x * size.y)));
+    tracer.renderScale = Math.min(1, Math.sqrt(maxPixels / Math.max(1, size.x * size.y)));
   }
 
   /** Hand the tracer the scene with traced lighting, then restore live lighting. */

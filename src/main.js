@@ -75,6 +75,11 @@ const rendererName = (() => {
 const isMobile = navigator.userAgentData?.mobile === true
   || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
   || (matchMedia("(pointer: coarse)").matches && Math.min(screen.width, screen.height) < 900);
+// If a photo render attempt took the page down (out of memory, lost context),
+// this flag survives the reload and keeps the device on the live renderer.
+const PHOTO_FLAG = "configurator:photo-render";
+const readFlag = () => { try { return sessionStorage.getItem(PHOTO_FLAG); } catch { return null; } };
+const writeFlag = (value) => { try { value ? sessionStorage.setItem(PHOTO_FLAG, value) : sessionStorage.removeItem(PHOTO_FLAG); } catch { /* storage may be blocked */ } };
 const tier = chooseRenderTier({
   webgl2: /^WebGL 2/i.test(String(gl.getParameter(gl.VERSION))),
   rendererName,
@@ -82,6 +87,8 @@ const tier = chooseRenderTier({
   hardwareConcurrency: navigator.hardwareConcurrency || 4,
   isMobile,
   saveData: navigator.connection?.saveData === true,
+  floatRenderTargets: Boolean(gl.getExtension("EXT_color_buffer_float")),
+  photoRenderFailed: readFlag() !== null,
   requested: params.get("render"),
 });
 document.documentElement.dataset.renderTier = tier.key;
@@ -106,7 +113,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.09;
 controls.minDistance = 1.1;
-controls.maxDistance = 11;
+controls.maxDistance = 14;
 controls.maxPolarAngle = Math.PI / 2 - 0.03; // stay above the floor
 controls.zoomSpeed = 0.8;
 const TARGET_BOUNDS = new THREE.Box3(new THREE.Vector3(-1.1, 0.25, -2.2), new THREE.Vector3(1.1, 2.0, 2.2));
@@ -180,7 +187,10 @@ function viewPose(view) {
   const target = new THREE.Vector3(...view.target);
   const offset = new THREE.Vector3(...view.position).sub(target);
   const usable = Math.max(0.35, (innerWidth - (innerWidth >= 900 ? 380 : 0)) / innerHeight);
-  offset.multiplyScalar(THREE.MathUtils.clamp(1.25 / usable, 1, 2.6));
+  offset.multiplyScalar(THREE.MathUtils.clamp(1.25 / usable, 1, 2.05));
+  // Stay inside the orbit limits, or the controls would keep correcting the camera
+  // every frame and the view would never count as still.
+  offset.clampLength(controls.minDistance + 0.05, controls.maxDistance - 0.25);
   return { position: target.clone().add(offset), target };
 }
 let flight = null;
@@ -206,7 +216,7 @@ let liveDirty = true;      // the live frame needs redrawing
 let lastMotion = performance.now();
 let lastFrame = performance.now();
 let tracedOnScreen = false;
-const SETTLE_MS = 220;     // stillness before the photo render starts
+const SETTLE_MS = tier.photo?.settleMs ?? 220; // stillness before the photo render starts
 
 function invalidate() {
   liveDirty = true;
@@ -259,7 +269,7 @@ function updateStatus() {
   if (photo) {
     if (photo.compiling) { key = "preparing"; label = "Preparing photo render"; }
     else if (photo.stale || !photo.revealed) { key = "preparing"; label = "Live preview"; }
-    else if (!photo.done) { key = "rendering"; label = "Rendering photo"; progress = photo.progress; }
+    else if (!photo.done) { key = "rendering"; label = "Rendering photo"; progress = photo.progress; if (photo.samples > 12) writeFlagOnce(); }
     else { key = "done"; label = "Photo render"; progress = 1; }
   }
   statusEl.style.setProperty("--progress", progress.toFixed(3));
@@ -269,13 +279,19 @@ function updateStatus() {
   statusEl.querySelector("span").textContent = label;
 }
 
+// A normal navigation away is not a crash: only an abrupt kill leaves the flag set.
+addEventListener("pagehide", () => { if (readFlag() === "attempting") writeFlag(null); });
+let flagCleared = false;
+function writeFlagOnce() { if (!flagCleared) { flagCleared = true; writeFlag(null); } }
+
 async function startPhotoRender() {
   if (!tier.pathTracing) return;
   try {
     const { createPhotoTracer } = await import("./photo-tracer.js");
     // Let the first live frame paint before the BVH build blocks the thread.
     await new Promise((resolve) => setTimeout(resolve, 60));
-    const tracer = createPhotoTracer(renderer, scene, camera, { studio });
+    writeFlag("attempting"); // cleared once the first traced image is on screen
+    const tracer = createPhotoTracer(renderer, scene, camera, { studio, ...tier.photo });
     tracer.build();
     tracedOnScreen = true; // the build touched GL state; resync before the next live frame
     tracer.stale = true;
@@ -284,6 +300,8 @@ async function startPhotoRender() {
     updateStatus();
   } catch (error) {
     console.warn("Photo render unavailable; staying on the live renderer.", error);
+    writeFlag("failed");
+    photo = null;
     renderer.resetState();
     invalidate();
   }
@@ -484,6 +502,9 @@ addEventListener("resize", () => { layoutCamera(); invalidate(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) lastFrame = performance.now(); });
 renderer.domElement.addEventListener("webglcontextlost", (event) => {
   event.preventDefault();
+  // A context lost while path tracing usually means the GPU ran out of memory.
+  // Reload once on the live renderer instead of leaving a dead canvas.
+  if (photo && readFlag() !== "failed") { writeFlag("failed"); location.reload(); return; }
   fatal("The 3D view stopped", "The graphics context was lost. Reload the page to continue.");
 });
 

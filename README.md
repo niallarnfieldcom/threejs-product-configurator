@@ -16,14 +16,15 @@ The demo scene is the **Fern Room**, a two-chair salon station modelled in Blend
 | `src/studio.js` | The photo studio: a procedural HDR panorama of soft boxes, a seamless floor, and a shadow light for the live renderer. No HDRI download. |
 | `src/finishes.js` | Applies finishes. A colour finish turns the authored texture into a neutral grain map and tints it, so new colours keep the leather's mottling and the timber's figure. |
 | `src/photo-tracer.js` | The path-traced photo render ([three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer)), loaded only on devices that will use it. |
-| `src/capabilities.js` | Chooses a render tier per device: `basic`, `live` or `traced`. |
+| `src/capabilities.js` | Chooses a render tier per device: `basic`, `live`, `mobile` or `traced`. |
 | `src/main.js` | Renderer, camera, UI wiring, share links, AR and embed messaging. |
 
 A few decisions worth copying:
 
 - **One lighting description, two renderers.** The path tracer importance-samples the studio panorama, so its soft boxes behave as area lights. The live renderer prefilters a version of the same panorama and adds one shadow-casting light aligned with the key.
 - **The photo render is automatic.** It starts 0.2 s after the camera stops, accumulates off-screen, and cross-fades over the live frame once it is clean enough to show. Any interaction returns to the live renderer instantly.
-- **It stops when it is done.** Tracing ends at 480 samples and the GPU goes idle. Phones and low-power devices never download the tracer at all.
+- **It stops when it is done.** Tracing ends at 480 samples and the GPU goes idle.
+- **Phones get it too, carefully.** Capable phones and tablets run a lighter photo render (lower resolution, 200 samples, shorter paths, more denoising). If an attempt crashes the tab or loses the graphics context, the device stays on the live renderer for the rest of the session. Low-power devices never download the tracer at all.
 - **Small payload.** The whole scene is one 4 MB Draco-compressed GLB. The initial JavaScript is about 220 KB gzipped, and the tracer is a separate 61 KB chunk.
 - **State lives in the URL.** `?a=cognac&b=oak&view=chair` restores a configuration, and invalid values fall back to the defaults.
 
