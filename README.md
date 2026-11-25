@@ -1,6 +1,6 @@
 # three.js product configurator
 
-A realistic 3D product configurator built on [three.js](https://threejs.org/). It draws with a fast live renderer while you move, then resolves a path-traced photo render in the browser as soon as the view is still: true mirror reflections, glass, brushed steel and soft studio shadows.
+A custom-built, realistic 3D product configurator on [three.js](https://threejs.org/), with path tracing by [three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer). It draws with a fast live renderer while you move, then resolves a path-traced photo render in the browser as soon as the view is still: true mirror reflections, glass, brushed steel and soft studio shadows.
 
 **[Live demo](https://niallarnfieldcom.github.io/threejs-product-configurator/)**
 
@@ -63,6 +63,22 @@ Messages are only exchanged with the origin given in `?parentOrigin=` or `window
 Optional globals, set before the app loads: `CONFIGURATOR_PRICING` (`{ price, leadTime, approved }`; prices show only when `approved` is true) and `CONFIGURATOR_ANALYTICS` (a function that receives each event; events are also pushed to `dataLayer`).
 
 Set `BASE_PATH` when building for a sub-path, for example `BASE_PATH=/threejs-product-configurator/ npm run build` for GitHub Pages.
+
+## Built with
+
+The configurator itself (scene configuration, studio lighting, finishes, interface, render tiers and embed messaging) and the Fern Room scene were made for this project. It stands on these open-source libraries, and the credit for what they do belongs to their authors:
+
+| Library | What it does here |
+| --- | --- |
+| [three.js](https://threejs.org/) | All real-time 3D rendering, model loading and camera controls. |
+| [three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer) by Garrett Johnson | The path tracer behind the photo render, with [three-mesh-bvh](https://github.com/gkjohnson/three-mesh-bvh). This project supplies the scene, lighting, quality tiers and the fade between renderers. |
+| [Draco](https://github.com/google/draco) (Google) | Decompresses the model geometry. Its decoder files are in `public/draco/`. |
+| [model-viewer](https://modelviewer.dev/) (Google) | The AR view on phones. |
+| [qrcode](https://github.com/soldair/node-qrcode) | The "try it on your phone" QR code. |
+| [PlayCanvas](https://playcanvas.com/) | The separate authoring page (`authoring.html`). |
+| [Vite](https://vite.dev/) | Development server and build. |
+
+Licences for each are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Background
 

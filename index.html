@@ -95,6 +95,8 @@
     .actions button[hidden] { display: none; }
     .credit { margin: 14px 0 0; font-size: 13px; color: var(--ink-2); }
     .credit a { color: var(--ink); font-weight: 500; text-underline-offset: 3px; }
+    .credit.tech { margin-top: 4px; font-size: 12px; }
+    .credit.tech a { font-weight: 400; }
     .body .credit { display: none; }
 
     /* ---------- photo render status ---------- */
@@ -214,7 +216,7 @@
         <span class="group-label" id="views-label">View</span>
         <div id="views"></div>
       </div>
-      <p class="credit">Built by <a href="https://niallarnfield.com/3d-product-configurator/" target="_blank" rel="noopener">Niall Arnfield</a>. Want one for your products?</p>
+      <p class="credit">Built by <a href="https://niallarnfield.com/3d-product-configurator/" target="_blank" rel="noopener">Niall Arnfield</a>. Want one for your products? Rendered with <a href="https://threejs.org/" target="_blank" rel="noopener">three.js</a> and <a href="https://github.com/gkjohnson/three-gpu-pathtracer" target="_blank" rel="noopener">three-gpu-pathtracer</a>.</p>
     </div>
     <div class="foot">
       <div class="actions">
@@ -223,6 +225,7 @@
         <button type="button" class="ghost" id="btn-share">Share</button>
       </div>
       <p class="credit">Built by <a href="https://niallarnfield.com/3d-product-configurator/" target="_blank" rel="noopener">Niall Arnfield</a>. Want one for your products?</p>
+      <p class="credit tech">Rendered with <a href="https://threejs.org/" target="_blank" rel="noopener">three.js</a> and <a href="https://github.com/gkjohnson/three-gpu-pathtracer" target="_blank" rel="noopener">three-gpu-pathtracer</a>.</p>
     </div>
   </aside>
 
