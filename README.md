@@ -2,6 +2,8 @@
 
 A data-driven 3D product configurator built on [three.js](https://threejs.org/). Add a product with a GLB and a few lines of config, and customers get multi-slot finish selection, a path-traced Photo Mode, AR, share links and a spec sheet, on desktop and mobile.
 
+**[Live demo](https://niallarnfieldcom.github.io/threejs-product-configurator/)**
+
 ![The configurator showing the Fern Room salon station: two oxblood leather styling chairs at a double-sided walnut station with a mirror and fern planter](docs/preview.jpg)
 
 The demo opens on the **Fern Room**, a two-chair salon station modelled in Blender for this project: switch the chairs' leather and the station's walnut while the glass, steel, ceramic and fern planting keep their authored materials. `tools/prepare-scene.py` turns the Blender export into configurator slots. Five simpler sample products (lounge chair, bar stool, sofa, sideboard, desk) are generated from primitives by `tools/generate-sample-products.py`. Prices are sample values.
