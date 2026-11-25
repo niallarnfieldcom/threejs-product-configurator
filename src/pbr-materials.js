@@ -37,6 +37,21 @@ const POLY_HAVEN = [
   },
 ];
 
+// The Fern Room scene's own walnut and leather (generated textures, see
+// tools/add-scene-materials.mjs). Albedo-only sets at 1K.
+const scene = (id, name, category, repeat) => ({
+  id, name, category,
+  thumb: `${DIR}/${id}/thumb.jpg`,
+  base: `${DIR}/${id}/ktx2`,
+  arBase: `${DIR}/${id}/1k`,
+  maps: { albedo: `${id}_diff_1k` },
+  repeat, metalness: 0,
+});
+const SCENE_FINISHES = [
+  scene("fern_leather", "Oxblood Leather", "upholstery", 1),
+  scene("fern_walnut", "Oiled Walnut", "laminate", 1),
+];
+
 // Colour-only sample finishes. Thumbnails reuse a neutral texture; the swatch
 // UI tints from `color`.
 const colour = (id, name, category, color, roughness, sheen = 0) => ({
@@ -54,4 +69,4 @@ const COLOUR_FINISHES = [
   colour("c_clay", "Clay", "laminate", "rgb(186,132,104)", 0.45),
 ];
 
-export const PBR_MATERIALS = [...POLY_HAVEN, ...COLOUR_FINISHES, ...ACG_MATERIALS];
+export const PBR_MATERIALS = [...SCENE_FINISHES, ...POLY_HAVEN, ...COLOUR_FINISHES, ...ACG_MATERIALS];

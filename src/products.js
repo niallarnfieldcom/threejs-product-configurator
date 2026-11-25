@@ -30,19 +30,20 @@ const P = (id, name, category, targetHeight, slots, slotFinish, defaults, extra 
 const SAMPLE_PRICE = (price, leadTime) => ({ price, leadTime, pricing: { approved: true, sample: true } });
 
 export const PRODUCTS = {
-  // Poly Haven "Barber Shop Chair 01" (CC0), split into slots by
-  // tools/prepare-barber-chair.py. `trim` keeps its original brass and carving.
-  barber_chair: P(
-    "barber_chair", "Barber Chair", "Seating", 1.49,
+  // The Fern Room: a two-chair salon station built in Blender for this demo.
+  // tools/prepare-scene.py splits it into leather (a) and walnut (b); glass,
+  // steel, ceramic and foliage keep their authored materials.
+  fern_room: P(
+    "fern_room", "Fern Room Salon Station", "Salon", 2.19,
     ["a", "b"],
     { a: "fabric", b: "laminate" },
-    { a: "pbr_leather", b: "acg_wood095" },
+    { a: "fern_leather", b: "fern_walnut" },
     {
-      ...SAMPLE_PRICE("1,450", "6–8 weeks"),
+      ...SAMPLE_PRICE("4,850", "8–10 weeks"),
       hotspots: [
-        { label: "Tufted leather upholstery", pos: [0, 0.75, 0] },
-        { label: "Adjustable headrest", pos: [0, 1.4, -0.3] },
-        { label: "Brass fittings and carved panels", pos: [0.3, 0.5, 0.2] },
+        { label: "Leather styling chairs on hydraulic bases", pos: [0.55, 0.75, 1.1] },
+        { label: "Double-sided walnut station with drawers", pos: [0, 0.85, 0] },
+        { label: "Mirror cassette with tube light and fern trough", pos: [0, 1.9, 0] },
       ],
     },
   ),
@@ -90,7 +91,7 @@ export const PRODUCTS = {
   ),
 };
 
-export const DEFAULT_PRODUCT = "barber_chair";
+export const DEFAULT_PRODUCT = "fern_room";
 
 // The active product is URL-driven (?product=<id>) so the catalogue dropdown can
 // switch products with a clean reload (full reinit of geometry / materials / PT),

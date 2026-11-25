@@ -272,6 +272,23 @@ try {
 
 BT("product GLB loaded");
 
+// Camera presets are tuned for a ~1.15 m product. Scale them (and the orbit
+// limits) to the loaded product so a large scene, such as a whole salon
+// station, is framed the same way as a single chair.
+{
+  const size = new THREE.Box3().setFromObject(chair).getSize(new THREE.Vector3());
+  const scale = Math.max(1, Math.max(size.x, size.y, size.z) / 2.1);
+  if (scale > 1) {
+    for (const preset of Object.values(CAM_PRESETS)) {
+      preset.pos.multiplyScalar(scale);
+      preset.tgt.multiplyScalar(scale);
+    }
+    controls.maxDistance *= scale;
+    camera.far = Math.max(camera.far, 60 * scale);
+    camera.updateProjectionMatrix();
+  }
+}
+
 // Multi-product experiment: load product 2 (moon desk) beside the chair, held OUT
 // of the trace scene until the chair converges (cutoff), then dropped in to trace.
 // Raster scene for UNSELECTED products — drawn cheaply over the PT result so they
